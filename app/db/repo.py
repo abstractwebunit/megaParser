@@ -562,21 +562,41 @@ async def recover_stale_tasks(
 async def stats_24h(sf: async_sessionmaker[AsyncSession]) -> dict[str, int]:
     cutoff = utcnow() - timedelta(hours=24)
     async with sf() as s:
-        msgs = (
+        msgs_total = (await s.execute(select(func.count(ParsedMessage.id)))).scalar_one()
+        msgs_24h = (
             await s.execute(
                 select(func.count(ParsedMessage.id)).where(ParsedMessage.date >= cutoff)
             )
         ).scalar_one()
         users = (await s.execute(select(func.count(ParsedUser.id)))).scalar_one()
-        groups = (await s.execute(select(func.count(TargetGroup.id)))).scalar_one()
+        groups_total = (await s.execute(select(func.count(TargetGroup.id)))).scalar_one()
+        groups_scanned = (
+            await s.execute(
+                select(func.count(TargetGroup.id)).where(TargetGroup.scan_status == "scanned")
+            )
+        ).scalar_one()
+        groups_pending = (
+            await s.execute(
+                select(func.count(TargetGroup.id)).where(TargetGroup.scan_status == "pending")
+            )
+        ).scalar_one()
         pending_tasks = (
             await s.execute(
                 select(func.count(ParserTask.id)).where(ParserTask.status == "pending")
             )
         ).scalar_one()
+        unresolved_links = (
+            await s.execute(
+                select(func.count(DiscoveredLink.id)).where(DiscoveredLink.resolved.is_(False))
+            )
+        ).scalar_one()
         return {
-            "messages_24h": int(msgs or 0),
+            "messages_total": int(msgs_total or 0),
+            "messages_24h": int(msgs_24h or 0),
             "users_total": int(users or 0),
-            "groups_total": int(groups or 0),
+            "groups_total": int(groups_total or 0),
+            "groups_scanned": int(groups_scanned or 0),
+            "groups_pending": int(groups_pending or 0),
             "pending_tasks": int(pending_tasks or 0),
+            "unresolved_links": int(unresolved_links or 0),
         }

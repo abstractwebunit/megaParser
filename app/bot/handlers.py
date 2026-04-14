@@ -98,15 +98,21 @@ async def cmd_status(message: Message) -> None:
     acc_connected = sum(1 for a in c.accounts.all if a.connected)
     acc_banned = sum(1 for a in c.accounts.all if a.limiter.is_banned())
     text = (
-        f"*megaParser status*\n"
-        f"running: `{c.control.run_event.is_set()}`\n"
-        f"accounts: `{acc_connected}/{acc_total}` connected, `{acc_banned}` banned\n"
-        f"groups: `{stats['groups_total']}`\n"
-        f"messages 24h: `{stats['messages_24h']}`\n"
-        f"users: `{stats['users_total']}`\n"
-        f"pending tasks: `{stats['pending_tasks']}`"
+        f"<b>megaParser status</b>\n"
+        f"running: <code>{c.control.run_event.is_set()}</code>\n"
+        f"accounts: <code>{acc_connected}/{acc_total}</code> connected, <code>{acc_banned}</code> banned\n\n"
+        f"<b>messages</b>\n"
+        f"  total:    <code>{stats['messages_total']:,}</code>\n"
+        f"  posted 24h: <code>{stats['messages_24h']:,}</code> (by tg date, not parse time)\n\n"
+        f"<b>groups</b>\n"
+        f"  total:    <code>{stats['groups_total']:,}</code>\n"
+        f"  scanned:  <code>{stats['groups_scanned']:,}</code>\n"
+        f"  pending:  <code>{stats['groups_pending']:,}</code>\n\n"
+        f"<b>queue</b>\n"
+        f"  pending tasks:    <code>{stats['pending_tasks']:,}</code>\n"
+        f"  unresolved links: <code>{stats['unresolved_links']:,}</code>"
     )
-    await message.answer(text, parse_mode="Markdown")
+    await message.answer(text)
 
 
 @router.message(Command("stats"))
@@ -115,10 +121,16 @@ async def cmd_stats(message: Message) -> None:
         return
     stats = await repo.stats_24h(get_session_factory())
     await message.answer(
-        f"messages 24h: {stats['messages_24h']}\n"
-        f"users total: {stats['users_total']}\n"
-        f"groups total: {stats['groups_total']}\n"
-        f"pending tasks: {stats['pending_tasks']}"
+        f"<b>messages</b>\n"
+        f"  total: <code>{stats['messages_total']:,}</code>\n"
+        f"  by tg date 24h: <code>{stats['messages_24h']:,}</code>\n\n"
+        f"<b>groups</b>\n"
+        f"  total: <code>{stats['groups_total']:,}</code>\n"
+        f"  scanned: <code>{stats['groups_scanned']:,}</code>\n"
+        f"  pending: <code>{stats['groups_pending']:,}</code>\n\n"
+        f"users in db: <code>{stats['users_total']:,}</code>\n"
+        f"task queue: <code>{stats['pending_tasks']:,}</code> pending\n"
+        f"chain links to resolve: <code>{stats['unresolved_links']:,}</code>"
     )
 
 
