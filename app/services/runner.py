@@ -198,8 +198,13 @@ class Runner:
         logger.info("worker {} stopped", worker_id)
 
     async def _dispatch(self, task: ParserTask, worker_id: int) -> None:
-        role = "discovery" if task.task_type in ("discover", "resolve_link") else "scanner"
-        acc = await self.accounts.get_available(role)
+        preferred_role = (
+            "discovery" if task.task_type in ("discover", "resolve_link") else "scanner"
+        )
+        acc = await self.accounts.get_available(preferred_role)
+        if acc is None and preferred_role != "scanner":
+            # No discovery-tagged accounts in pool — fall back to any scanner.
+            acc = await self.accounts.get_available("scanner")
         if acc is None:
             await repo.requeue_task(self.sf, task.id)
             await asyncio.sleep(30)
