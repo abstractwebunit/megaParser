@@ -1,0 +1,55 @@
+runner:
+  max_concurrent_accounts: 8          # push: 8/9 alive accounts, +60% over 5
+  worker_pool_size: 8
+  recovery_check_minutes: 5
+  db_poll_interval_seconds: 30
+  stale_task_timeout_minutes: 10
+
+rate_limits:
+  delay_between_groups: [8, 15]       # random sleep range, seconds
+  delay_between_profiles: [2, 4]
+  delay_between_searches: [5, 10]
+  delay_between_messages_batch: 1.5
+  max_groups_per_day: 300
+  max_groups_per_hour: 25
+  max_profiles_per_day: 200
+  max_searches_per_day: 20
+
+  max_flood_waits_before_pause: 3
+  flood_wait_multiplier: 2.0
+  flood_reset_hours: 1
+  flood_long_threshold_seconds: 300   # FloodWait >300s = temp ban
+
+  account_work_minutes: [120, 180]
+  account_rest_minutes: [30, 60]
+  night_pause_utc: [2, 7]
+
+  cooldown_rescan_hours: 24
+
+discovery:
+  max_depth: 4
+  max_resolve_per_cycle: 500
+  seed_groups: []                     # список @username для старта
+  keywords: []                        # для search_global
+  skip_usernames: [joinchat, addlist, proxy, socks, c, s, iv, share]
+
+scanner:
+  messages_per_group: 1000
+  messages_batch_size: 100
+  fetch_profiles: false               # тяжёлая операция, лучше отдельной задачей
+  max_profiles_per_group: 30
+  enable_fulltext_index: false        # tsvector GIN — включать вручную, жрёт место
+
+members:
+  max_members_per_group: 10000
+  alphabet_trick_threshold: 10000     # при >10k юзать query=a..z
+
+monitor:
+  enabled: false
+  min_accounts: 2                     # failover pool
+  rebuild_filter_seconds: 30
+  groups: []
+
+health:
+  watchdog_queue_stall_minutes: 30
+  proxy_check_interval_minutes: 60

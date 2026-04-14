@@ -1,0 +1,33 @@
+.env
+.env.server
+.env.local
+.venv/
+__pycache__/
+*.pyc
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+sessions/*.session
+sessions/*.session-journal
+logs/
+dumps/
+tmp/
+build/
+dist/
+
+proxies.txt
+accounts/
+
+# imported account archives
+2*.zip
+
+# claude code local state
+.claude/
+.claude/settings.local.json
+
+# deploy helper artifacts (contains seed lists / proxies)
+_deploy/proxies.txt
+_deploy/seeds.txt
+_deploy/seeds2.txt
