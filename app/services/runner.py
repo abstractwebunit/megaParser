@@ -50,10 +50,12 @@ class Runner:
         return t
 
     async def start(self) -> None:
+        logger.info("runner starting")
         await repo.recover_stale_tasks(
             self.sf, self.settings.yaml_cfg.runner.stale_task_timeout_minutes
         )
         self.control.run_event.set()
+        logger.info("run_event set")
 
         self._spawn(self._db_poller_loop())
         self._spawn(self._recovery_loop())
@@ -62,6 +64,7 @@ class Runner:
         for i in range(self.settings.yaml_cfg.runner.worker_pool_size):
             self._spawn(self._worker_loop(i))
 
+        logger.info("runner: all background tasks spawned, waiting for stop_event")
         await self.control.stop_event.wait()
         logger.info("runner stopping...")
         for t in list(self._tasks):
@@ -69,6 +72,7 @@ class Runner:
 
     async def _db_poller_loop(self) -> None:
         interval = self.settings.yaml_cfg.runner.db_poll_interval_seconds
+        logger.info("db_poller started (interval={}s)", interval)
         while not self.control.stop_event.is_set():
             try:
                 if not self.control.run_event.is_set():
@@ -145,6 +149,7 @@ class Runner:
 
     async def _recovery_loop(self) -> None:
         interval = self.settings.yaml_cfg.runner.recovery_check_minutes * 60
+        logger.info("recovery_loop started (interval={}s)", interval)
         while not self.control.stop_event.is_set():
             try:
                 await asyncio.sleep(interval)

@@ -57,7 +57,9 @@ async def parse_history(
     chat = await account.client.get_chat(chat_ref)
     group_tg_id = chat.id
     if group.tg_id != group_tg_id:
+        from sqlalchemy import select as sa_select
         from sqlalchemy import update as sa_update
+        from sqlalchemy.exc import IntegrityError
 
         from app.db.models import TargetGroup
 
@@ -65,20 +67,41 @@ async def parse_history(
         t = getattr(chat, "type", None)
         if t is not None and hasattr(t, "name"):
             type_name = t.name.lower()
-        async with sf() as s, s.begin():
-            await s.execute(
-                sa_update(TargetGroup)
-                .where(TargetGroup.id == group.id)
-                .values(
-                    tg_id=group_tg_id,
-                    username=getattr(chat, "username", None),
-                    title=(getattr(chat, "title", "") or "")[:255],
-                    type=type_name,
-                    members_count=getattr(chat, "members_count", 0) or 0,
-                    description=(getattr(chat, "description", "") or "")[:2000],
-                    scan_status="scanning",
+        try:
+            async with sf() as s, s.begin():
+                await s.execute(
+                    sa_update(TargetGroup)
+                    .where(TargetGroup.id == group.id)
+                    .values(
+                        tg_id=group_tg_id,
+                        username=getattr(chat, "username", None),
+                        title=(getattr(chat, "title", "") or "")[:255],
+                        type=type_name,
+                        members_count=getattr(chat, "members_count", 0) or 0,
+                        description=(getattr(chat, "description", "") or "")[:2000],
+                        scan_status="scanning",
+                    )
                 )
+        except IntegrityError:
+            # Another row already owns this tg_id — current row is a duplicate seed.
+            # Mark it as duplicate, find the canonical row, continue with its id.
+            logger.warning(
+                "group {} duplicates existing tg_id={}, merging into canonical row",
+                group.id, group_tg_id,
             )
+            async with sf() as s, s.begin():
+                await s.execute(
+                    sa_update(TargetGroup)
+                    .where(TargetGroup.id == group.id)
+                    .values(scan_status="duplicate")
+                )
+                row = (
+                    await s.execute(
+                        sa_select(TargetGroup).where(TargetGroup.tg_id == group_tg_id)
+                    )
+                ).scalar_one_or_none()
+                if row is not None:
+                    group = row  # continue scanning under the canonical row
 
     batch: list[dict] = []
     links: set[str] = set()
